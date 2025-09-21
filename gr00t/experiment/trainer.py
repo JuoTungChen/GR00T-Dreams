@@ -21,14 +21,13 @@ import torch
 import transformers
 from torch.utils.data import Dataset, Sampler
 from transformers.trainer import (
-    ALL_LAYERNORM_LAYERS,
     TRAINER_STATE_NAME,
     TrainerState,
     get_last_checkpoint,
     get_parameter_names,
     is_sagemaker_mp_enabled,
 )
-
+from transformers.pytorch_utils import ALL_LAYERNORM_LAYERS
 
 class BaseSampler(Sampler):
     """Sampler for dataset, which enables `set_epoch` for Dataset.
@@ -65,8 +64,10 @@ class DualBrainTrainer(transformers.Trainer):
         self.compute_dtype = kwargs.pop("compute_dtype")
         super().__init__(**kwargs)
 
-    def _get_train_sampler(self):
-        return BaseSampler(self.train_dataset, shuffle=True, seed=self.args.seed)
+    def _get_train_sampler(self, *args):
+        # Handle both old and new calling conventions
+        dataset = args[0] if args else None
+        return BaseSampler(dataset, shuffle=True, seed=self.args.seed)
 
     def _get_eval_sampler(self, eval_dataset):
         return BaseSampler(eval_dataset, shuffle=False)
